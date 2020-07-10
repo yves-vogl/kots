@@ -316,9 +316,29 @@ func GetTroubleshoot(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(500)
 		return
 	}
-	existingTs := obj.(*v1beta1.Collector)
 
-	existingTs = populateNamespaces(existingTs)
+	var existingSupportBundle *v1beta1.SupportBundle
+
+	sb, ok := obj.(*v1beta1.SupportBundle)
+	if ok {
+		existingSupportBundle = sb
+	} else {
+		collectors, ok := obj.(*v1beta1.Collector)
+		if ok {
+			existingSupportBundle = &v1beta1.SupportBundle{
+				ObjectMeta: collectors.ObjectMeta,
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: collectors.APIVersion,
+					Kind:       "SupportBundle",
+				},
+				Spec: v1beta1.SupportBundleSpec{
+					Collectors: collectors.Spec.Collectors,
+				},
+			}
+		}
+	}
+
+	existingSupportBundle = populateNamespaces(existingSupportBundle)
 
 	// determine an upload URL
 	var uploadURL string
@@ -342,8 +362,8 @@ func GetTroubleshoot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tsSpec := addDefaultTroubleshoot(existingTs, licenseString)
-	tsSpec.Spec.AfterCollection = []*v1beta1.AfterCollection{
+	supportBundle := addDefaultTroubleshoot(existingSupportBundle, licenseString)
+	supportBundle.Spec.AfterCollection = []*v1beta1.AfterCollection{
 		{
 			UploadResultsTo: &v1beta1.ResultRequest{
 				URI:       uploadURL,
@@ -353,7 +373,7 @@ func GetTroubleshoot(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	specBytes, err := yaml.Marshal(tsSpec)
+	specBytes, err := yaml.Marshal(supportBundle)
 	if err != nil {
 		logger.Error(err)
 		w.WriteHeader(500)
@@ -449,11 +469,11 @@ func SetSupportBundleRedactions(w http.ResponseWriter, r *http.Request) {
 }
 
 // if a namespace is not set for a secret/run/logs/exec/copy collector, set it to the current namespace
-func populateNamespaces(existingSpec *v1beta1.Collector) *v1beta1.Collector {
-	if existingSpec == nil {
+func populateNamespaces(supportBundle *v1beta1.SupportBundle) *v1beta1.SupportBundle {
+	if supportBundle == nil {
 		return nil
-	} else if existingSpec.Spec.Collectors == nil {
-		return existingSpec
+	} else if supportBundle.Spec.Collectors == nil {
+		return supportBundle
 	}
 
 	builder := template.Builder{}
@@ -471,7 +491,7 @@ func populateNamespaces(existingSpec *v1beta1.Collector) *v1beta1.Collector {
 	}
 
 	collects := []*v1beta1.Collect{}
-	for _, collect := range existingSpec.Spec.Collectors {
+	for _, collect := range supportBundle.Spec.Collectors {
 		if collect.Secret != nil {
 			collect.Secret.Namespace = ns(collect.Secret.Namespace)
 		}
@@ -489,15 +509,15 @@ func populateNamespaces(existingSpec *v1beta1.Collector) *v1beta1.Collector {
 		}
 		collects = append(collects, collect)
 	}
-	existingSpec.Spec.Collectors = collects
-	return existingSpec
+	supportBundle.Spec.Collectors = collects
+	return supportBundle
 }
 
-func addDefaultTroubleshoot(existingSpec *v1beta1.Collector, licenseData string) *v1beta1.Collector {
-	if existingSpec == nil {
-		existingSpec = &v1beta1.Collector{
+func addDefaultTroubleshoot(existingSupportBundle *v1beta1.SupportBundle, licenseData string) *v1beta1.SupportBundle {
+	if existingSupportBundle == nil {
+		existingSupportBundle = &v1beta1.SupportBundle{
 			TypeMeta: v1.TypeMeta{
-				Kind:       "Collector",
+				Kind:       "SupportBundle",
 				APIVersion: "troubleshoot.replicated.com/v1beta1",
 			},
 			ObjectMeta: v1.ObjectMeta{
@@ -506,7 +526,7 @@ func addDefaultTroubleshoot(existingSpec *v1beta1.Collector, licenseData string)
 		}
 	}
 
-	existingSpec.Spec.Collectors = append(existingSpec.Spec.Collectors, []*v1beta1.Collect{
+	existingSupportBundle.Spec.Collectors = append(existingSupportBundle.Spec.Collectors, []*v1beta1.Collect{
 		{
 			Data: &v1beta1.Data{
 				CollectorMeta: v1beta1.CollectorMeta{
@@ -528,12 +548,12 @@ func addDefaultTroubleshoot(existingSpec *v1beta1.Collector, licenseData string)
 			},
 		},
 	}...)
-	existingSpec.Spec.Collectors = append(existingSpec.Spec.Collectors, makeDbCollectors()...)
-	existingSpec.Spec.Collectors = append(existingSpec.Spec.Collectors, makeKotsadmCollectors()...)
-	existingSpec.Spec.Collectors = append(existingSpec.Spec.Collectors, makeRookCollectors()...)
-	existingSpec.Spec.Collectors = append(existingSpec.Spec.Collectors, makeKurlCollectors()...)
-	existingSpec.Spec.Collectors = append(existingSpec.Spec.Collectors, makeVeleroCollectors()...)
-	return existingSpec
+	existingSupportBundle.Spec.Collectors = append(existingSupportBundle.Spec.Collectors, makeDbCollectors()...)
+	existingSupportBundle.Spec.Collectors = append(existingSupportBundle.Spec.Collectors, makeKotsadmCollectors()...)
+	existingSupportBundle.Spec.Collectors = append(existingSupportBundle.Spec.Collectors, makeRookCollectors()...)
+	existingSupportBundle.Spec.Collectors = append(existingSupportBundle.Spec.Collectors, makeKurlCollectors()...)
+	existingSupportBundle.Spec.Collectors = append(existingSupportBundle.Spec.Collectors, makeVeleroCollectors()...)
+	return existingSupportBundle
 }
 
 func makeDbCollectors() []*v1beta1.Collect {

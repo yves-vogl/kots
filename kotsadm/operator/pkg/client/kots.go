@@ -20,13 +20,21 @@ func removeInternalGVK(manifests []byte) ([]byte, error) {
 			return nil, errors.Wrap(err, "unable to decode yaml")
 		}
 
-		if gvk.Group == "troubleshoot.replicated.com" {
+		if gvk.Group == "troubleshoot.replicated.com" || gvk.Group == "troubleshoot.sh" {
 			if gvk.Version == "v1beta1" {
 				if gvk.Kind == "Collector" {
 					continue
 				}
 
 				if gvk.Kind == "Preflight" {
+					continue
+				}
+
+				if gvk.Kind == "Analyzer" {
+					continue
+				}
+
+				if gvk.Kind == "SupportBundle" {
 					continue
 				}
 			}
