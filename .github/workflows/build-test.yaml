@@ -113,7 +113,7 @@ jobs:
       - name: prepare kotsadm-smoke-test
         run: |
           ./bin/kots \
-          install qakots/github-actions \
+          install kotsadm-smoke-test/automated \
           --port-forward=false \
           --namespace kotsadm-smoke-test \
           --shared-password password \
@@ -126,3 +126,17 @@ jobs:
           ADMIN_CONSOLE_PID=$!
           testim --token ${{ secrets.TESTIM_ACCESS_TOKEN }} --project ${{ secrets.TESTIM_PROJECT_ID }} --grid "Testim-grid" --report-file testim-report.xml --label kotsadm-smoke-test --tunnel --tunnel-port 8800
           kill $ADMIN_CONSOLE_PID
+      - name: clean up koptsadm-smoke-test
+        run: |
+          kubectl delete ns kotsadm-smoke-test
+
+      - name: prepare minimal-rbac
+        run: |
+          ./bin/kots \
+          install minimal-rbac/automated \
+          --port-forward=false \
+          --namespace minmimal-rbac \
+          --shared-password password \
+          --kotsadm-registry ttl.sh \
+          --kotsadm-namespace automated-${{ github.run_id }} \
+          --kotsadm-tag 2h 
