@@ -11,6 +11,7 @@
 ## Non Goals
 
 - Delivering images to the read-only registry.
+- Changing registry settings in airgap mode
 
 ## Background
 
