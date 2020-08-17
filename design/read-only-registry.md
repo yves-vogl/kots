@@ -52,7 +52,7 @@ Stretch: Replicated could provide imageless airgap bundles.
 
 1. Registry settings page will have a checkbox named Read only.
 1. In aigapped environments this is always disabled
-   - if read-only set, all fields can be modiefied
+   - if read-only set, all fields can be modified
    - if read-only is not set, only user name and password can be modified (this matches current behavior)
 1. When Registry Settings are saved:
    - if read-only is true, a new release is created, but images are not pushed to the registry.
